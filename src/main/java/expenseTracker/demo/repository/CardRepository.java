@@ -14,6 +14,11 @@ public interface CardRepository extends JpaRepository<CardEntity, Integer> {
             value = "SELECT balance FROM  card_entity  WHERE card_id= :cardId")
     public long getCardBalance(@Param("cardId") int cardId);
 
+
+    @Query(nativeQuery = true,
+    value = "SELECT credit_limit FROM  card_entity  WHERE card_id= :cardId ")
+    public long getCreditLimit(@Param("cardId") int cardId);
+
     @Query(nativeQuery = true,
             value = "SELECT credits_used FROM  card_entity  WHERE card_id= :cardId")
     public long getCardCreditsUsed(@Param("cardId") int cardId);
@@ -39,7 +44,9 @@ public interface CardRepository extends JpaRepository<CardEntity, Integer> {
     @Transactional
     @Query(nativeQuery = true,
             value = "UPDATE card_entity SET credits_used =:creditsUsed WHERE card_id= :cardId")
-    public void updateCardCreditsUsed(@Param("cardId") int cardId, @Param("creditsUsed") long balance);
+    public void updateCardCreditsUsed(@Param("cardId") int cardId, @Param("creditsUsed") long creditsUsed);
+
+
 
 
 

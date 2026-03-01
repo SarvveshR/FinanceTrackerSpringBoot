@@ -111,8 +111,7 @@ public class ResponseCardDTO {
         return transaction;
     }
 
-    public void setTransaction(List<ResponseTransactionDTO> transactionEntity) {
-        this.transaction = transactionEntity;
+    public void setTransaction(List<ResponseTransactionDTO> transactionEntity) {this.transaction = transactionEntity;
     }
 
 }

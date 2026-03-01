@@ -2,6 +2,7 @@ package expenseTracker.demo.repository;
 
 import expenseTracker.demo.entities.TransactionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,6 +21,12 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
     )
     public  TransactionEntity getTransactionAmount(@Param("transactionId") int transactionId);
 
+@Modifying
+    @Query(
+            nativeQuery = true,
+            value = "DELETE FROM transaction_entity WHERE card_id=:cardId"
+    )
+    public int deleteTransactionbyCardId(@Param("cardId") int cardId);
 
 
 }

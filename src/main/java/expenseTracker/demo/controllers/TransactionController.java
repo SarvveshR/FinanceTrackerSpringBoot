@@ -25,8 +25,19 @@ public class TransactionController {
 
     @PutMapping("/edit/{cardId}/{transactionId}")
     public ResponseEntity<ResponseCardBalanceTransactionDTO> editTransaction(@RequestBody RequestTransactionDTO requestTransactionDTO, @PathVariable("cardId") int cardId, @PathVariable("transactionId")  int transactionId){
-        return ResponseEntity.ok().body(transactionService.editTransaction(requestTransactionDTO,transactionId,cardId)) ;
+        ResponseCardBalanceTransactionDTO responseCardBalanceTransactionDTO = transactionService.editTransaction(requestTransactionDTO, transactionId,cardId);
+        return ResponseEntity.ok().body(responseCardBalanceTransactionDTO);
+
+
     }
+    @DeleteMapping("/delete/{cardId}/{transactionId}")
+  public ResponseEntity<ResponseCardBalanceTransactionDTO> deleteTransaction( @PathVariable("transactionId")  int transactionId, @PathVariable("cardId")  int cardId){
+        return ResponseEntity.ok().body(transactionService.deleteTransaction(transactionId,cardId));
+
+    }
+
+
+
 
 
 }

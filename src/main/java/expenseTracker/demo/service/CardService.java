@@ -59,6 +59,45 @@ public class CardService {
          return cards;
 
      }
+     public ResponseCardDTO getCard(CardEntity cardEntity){
+
+         ResponseCardDTO responseCardDTO= new ResponseCardDTO();
+         responseCardDTO.setCardId(cardEntity.getCardId());
+         responseCardDTO.setCardHolder(cardEntity.getCardHolder());
+         responseCardDTO.setCardNetwork(cardEntity.getCardNetwork());
+         responseCardDTO.setCardNo(cardEntity.getCardNo());
+         responseCardDTO.setValidFrom(cardEntity.getValidFrom());
+         responseCardDTO.setValidTo(cardEntity.getValidTo());
+         responseCardDTO.setDebit(cardEntity.isDebit());
+         responseCardDTO.setCredit(cardEntity.isCredit());
+         responseCardDTO.setBalance(cardEntity.getBalance());
+         responseCardDTO.setCreditsUsed(cardEntity.getCreditsUsed());
+         responseCardDTO.setCreditLimit(cardEntity.getCreditLimit());
+         return responseCardDTO;
+
+     }
+
+     public ResponseCardDTO editCard(RequestCardDTO card,int cardId){
+         CardEntity cardEntity= cardRepository.getReferenceById(cardId);
+         cardEntity.setCardHolder(card.getCardHolder());
+         cardEntity.setCardNetwork(card.getCardNetwork());
+         cardEntity.setCardNo(card.getCardNo());
+         cardEntity.setValidFrom(card.getValidFrom());
+         cardEntity.setValidTo(card.getValidTo());
+         cardEntity.setCreditLimit(card.getCreditLimit());
+         CardEntity saveEntity= cardRepository.save(cardEntity);
+         return getCard(saveEntity);
+
+     }
+
+
+     public boolean deleteCard(int cardId){
+
+             boolean delTrans=transactionService.deleteTransactionByCardId(cardId);
+             cardRepository.deleteById(cardId);
+
+             return delTrans;
+     }
 
      public long getCardBalance(int cardId){
          return cardRepository.getCardBalance(cardId);

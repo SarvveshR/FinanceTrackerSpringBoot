@@ -6,6 +6,7 @@ import expenseTracker.demo.repository.TransactionRepository;
 import expenseTracker.demo.requestDtos.RequestTransactionDTO;
 import expenseTracker.demo.responseDTOs.ResponseCardBalanceTransactionDTO;
 import expenseTracker.demo.responseDTOs.ResponseTransactionDTO;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.LifecycleProcessor;
 import org.springframework.stereotype.Service;
@@ -39,10 +40,11 @@ ResponseCardBalanceTransactionDTO responseCardBalanceTransactionDTO = new Respon
         transactionEntity.setIncome(requestTransactionDTO.isIncome());
         TransactionEntity savedTransaction=transactionRepository.save(transactionEntity);
         ResponseTransactionDTO transactionDTO= getAddedTransaction(savedTransaction);
-
         responseCardBalanceTransactionDTO.setResponseTransactionDTO(transactionDTO);
         if(cardRepository.isCredit(cardId)){
-            updateCardCreditsUsed(cardId,transactionDTO.getAmount());
+            long  currentCreditsUSed=cardRepository.getCardCreditsUsed(cardId);
+            long newCreditused= currentCreditsUSed+requestTransactionDTO.getAmount();
+            updateCardCreditsUsed(cardId,newCreditused);
             responseCardBalanceTransactionDTO.setCreditsUsed(cardRepository.getCardCreditsUsed(cardId));
         }
         else if(cardRepository.isDebit(cardId)){
@@ -97,30 +99,34 @@ ResponseCardBalanceTransactionDTO responseCardBalanceTransactionDTO = new Respon
         TransactionEntity transactionEntity= transactionRepository.getById(transactionId);
         ResponseCardBalanceTransactionDTO responseCardBalanceTransactionDTO= new ResponseCardBalanceTransactionDTO();
 
+        transactionEntity.setCategoryId(requestTransactionDTO.getType().getId());
+        transactionEntity.setDate(requestTransactionDTO.getDate());
+        transactionEntity.setTime(requestTransactionDTO.getTime());
+        transactionEntity.setDescription(requestTransactionDTO.getDescription());
 
         if(cardRepository.isDebit(cardId)){
             if(updateCardBalanceTransactionEdit(cardId,requestTransactionDTO,transactionEntity,transactionId)){
-                transactionEntity.setCategoryId(requestTransactionDTO.getType().getId());
-                transactionEntity.setDate(requestTransactionDTO.getDate());
-                transactionEntity.setTime(requestTransactionDTO.getTime());
-                transactionEntity.setDescription(requestTransactionDTO.getDescription());
                 transactionEntity.setAmount(requestTransactionDTO.getAmount());
-                TransactionEntity savedEntity= transactionRepository.save(transactionEntity);
-                ResponseTransactionDTO responseTransactionDTO=getAddedTransaction(savedEntity);
-                responseCardBalanceTransactionDTO.setResponseTransactionDTO(responseTransactionDTO);
-                responseCardBalanceTransactionDTO.setBalance(cardRepository.getCardBalance(cardId));
-                return responseCardBalanceTransactionDTO;
             }
-            else{
-                return responseCardBalanceTransactionDTO;
+            TransactionEntity  savedEntity= transactionRepository.save(transactionEntity);
+            ResponseTransactionDTO responseTransactionDTO=getAddedTransaction(savedEntity);
+            responseCardBalanceTransactionDTO.setResponseTransactionDTO(responseTransactionDTO);
+            responseCardBalanceTransactionDTO.setBalance(cardRepository.getCardBalance(cardId));
 
-            }
+            return responseCardBalanceTransactionDTO;
+
         }
+        else  if(cardRepository.isCredit(cardId)){
+            if(updateCardCreditsTransactionEdit(cardId,requestTransactionDTO,transactionEntity,transactionId)){
+                transactionEntity.setAmount(requestTransactionDTO.getAmount());
+            }
+            TransactionEntity  savedEntity= transactionRepository.save(transactionEntity);
+            ResponseTransactionDTO responseTransactionDTO=getAddedTransaction(savedEntity);
+            responseCardBalanceTransactionDTO.setResponseTransactionDTO(responseTransactionDTO);
+            responseCardBalanceTransactionDTO.setCreditsUsed(cardRepository.getCardCreditsUsed(cardId));
 
 
-
-
-
+        }
 
         return responseCardBalanceTransactionDTO;
 
@@ -129,6 +135,7 @@ ResponseCardBalanceTransactionDTO responseCardBalanceTransactionDTO = new Respon
 
 
     }
+
 
     public boolean updateCardBalanceTransactionEdit(int cardId,RequestTransactionDTO requestTransactionDTO,TransactionEntity  currentTransactionEntity,int transactionid){
         long cardBalance = cardRepository.getCardBalance(cardId);
@@ -148,9 +155,7 @@ ResponseCardBalanceTransactionDTO responseCardBalanceTransactionDTO = new Respon
                         cardRepository.updateCardBalance(cardId, newCardBalance);
                         return true;
                     }
-                    else{
-                        return false;
-                    }
+
 
 
                 }
@@ -163,10 +168,7 @@ ResponseCardBalanceTransactionDTO responseCardBalanceTransactionDTO = new Respon
                         cardRepository.updateCardBalance(cardId,newCardBalance);
                         return true;
                     }
-                    else{
-                        return false;
 
-                    }
 
                 }
                 else if(requestTransactionDTO.isExpense()){
@@ -183,6 +185,38 @@ ResponseCardBalanceTransactionDTO responseCardBalanceTransactionDTO = new Respon
         return false;
     }
 
+
+
+    public boolean updateCardCreditsTransactionEdit(int cardId,RequestTransactionDTO requestTransactionDTO,TransactionEntity  currentTransactionEntity,int transactionid){
+        long creditLimit= cardRepository.getCreditLimit(cardId);
+        long creditsUsed = cardRepository.getCardCreditsUsed(cardId);
+        long  difference= currentTransactionEntity.getAmount()-requestTransactionDTO.getAmount();
+
+
+        if(difference>0) {
+            long newCreditsUsed= creditsUsed - Math.abs(difference);
+            cardRepository.updateCardCreditsUsed(cardId, newCreditsUsed);
+            return true;
+        }
+        else if(difference<0){
+            long newCreditsUsed= creditsUsed + Math.abs(difference);
+
+            if(creditLimit>=newCreditsUsed){
+                cardRepository.updateCardCreditsUsed(cardId, newCreditsUsed);
+                return true;
+            }
+
+
+        }
+
+        return false;
+    }
+
+
+
+
+
+
     public void  updateCardBalance(int cardId, ResponseTransactionDTO responseTransactionDTO){
         long cardBalance = cardRepository.getCardBalance(cardId);
         if(responseTransactionDTO.isIncome()){
@@ -198,16 +232,64 @@ ResponseCardBalanceTransactionDTO responseCardBalanceTransactionDTO = new Respon
 
     }
 
-    public void updateCardCreditsUsed(int cardId, int newTransaAmount){
-        long cardCreditsUsed = cardRepository.getCardCreditsUsed(cardId);
-
-        cardCreditsUsed= cardCreditsUsed-newTransaAmount;
-
-         cardRepository.updateCardCreditsUsed(cardId,cardCreditsUsed);
+    public void updateCardCreditsUsed(int cardId, long newCreditsUsed){
+        cardRepository.updateCardCreditsUsed(cardId, newCreditsUsed);
 
     }
 
 
+
+    public ResponseCardBalanceTransactionDTO deleteTransaction( int transactionId, int cardId) {
+        TransactionEntity transactionEntity= transactionRepository.getReferenceById(transactionId);
+        ResponseCardBalanceTransactionDTO responseCardBalanceTransactionDTO= new ResponseCardBalanceTransactionDTO();
+        long cardBalance= cardRepository.getCardBalance(cardId);
+
+
+        if (cardRepository.isDebit(cardId)) {
+            if(transactionEntity.isExpense() ){
+                long newCardBalance= cardBalance+transactionEntity.getAmount();
+                cardRepository.updateCardBalance(cardId, newCardBalance);
+                responseCardBalanceTransactionDTO.setBalance(cardRepository.getCardBalance(cardId));
+                transactionRepository.deleteById(transactionId);
+
+            }
+            else if(transactionEntity.isIncome() && cardBalance>= transactionEntity.getAmount()){
+                cardRepository.updateCardBalance(cardId, cardBalance-transactionEntity.getAmount());
+                responseCardBalanceTransactionDTO.setBalance(cardRepository.getCardBalance(cardId));
+                transactionRepository.deleteById(transactionId);
+
+            }
+            else{
+                responseCardBalanceTransactionDTO.setResponseTransactionDTO(getAddedTransaction(transactionEntity));
+                return responseCardBalanceTransactionDTO;
+
+            }
+            return responseCardBalanceTransactionDTO;
+
+        }
+
+        long cardCreditsUsed= cardRepository.getCardCreditsUsed(cardId);
+        long newCreditsUsed= cardCreditsUsed-transactionEntity.getAmount();
+        cardRepository.updateCardCreditsUsed(cardId, newCreditsUsed);
+        responseCardBalanceTransactionDTO.setCreditsUsed(cardRepository.getCardCreditsUsed(cardId));
+        transactionRepository.deleteById(transactionId);
+        return  responseCardBalanceTransactionDTO;
+
+
+
+
+    }
+    @Transactional
+    public boolean deleteTransactionByCardId(int cardId){
+        int noOfEntity= transactionRepository.getAllTransaction(cardId).size();
+        int rowsDeleted= transactionRepository.deleteTransactionbyCardId(cardId);
+        if(rowsDeleted==noOfEntity){
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
 
 
 
