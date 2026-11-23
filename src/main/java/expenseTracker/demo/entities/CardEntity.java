@@ -19,7 +19,16 @@ public class CardEntity {
     private  long balance;
     private   long creditLimit;
     private   long creditsUsed;
+    // Owner (user_entity.id). Nullable only so the column can be added to existing rows.
+    private Long userId;
 
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
 
 
 
